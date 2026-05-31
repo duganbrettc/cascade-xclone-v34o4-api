@@ -535,7 +535,7 @@ func withDB(h http.HandlerFunc) http.HandlerFunc {
 
 func connectDB(dbURL string) {
 	var err error
-	for i := 0; i < 30; i++ {
+	for i := 1; ; i++ {
 		db, err = sql.Open("postgres", dbURL)
 		if err == nil {
 			if err = db.Ping(); err == nil {
@@ -544,10 +544,9 @@ func connectDB(dbURL string) {
 				return
 			}
 		}
-		log.Printf("waiting for db... (%d/30): %v", i+1, err)
+		log.Printf("waiting for db... (attempt %d): %v", i, err)
 		time.Sleep(2 * time.Second)
 	}
-	log.Fatalf("could not connect to db after retries: %v", err)
 }
 
 func main() {
