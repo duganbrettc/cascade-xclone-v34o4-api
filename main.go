@@ -524,9 +524,13 @@ var dbReady = make(chan struct{})
 
 func withDB(h http.HandlerFunc) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
+		timer := time.NewTimer(10 * time.Second)
+		defer timer.Stop()
 		select {
 		case <-dbReady:
 			h(w, r)
+		case <-timer.C:
+			writeError(w, http.StatusServiceUnavailable, "database not ready")
 		case <-r.Context().Done():
 			writeError(w, http.StatusServiceUnavailable, "service starting up")
 		}
@@ -536,13 +540,16 @@ func withDB(h http.HandlerFunc) http.HandlerFunc {
 func connectDB(dbURL string) {
 	var err error
 	for i := 1; ; i++ {
-		db, err = sql.Open("postgres", dbURL)
+		var d *sql.DB
+		d, err = sql.Open("postgres", dbURL)
 		if err == nil {
-			if err = db.Ping(); err == nil {
+			if err = d.Ping(); err == nil {
+				db = d
 				log.Println("connected to db")
 				close(dbReady)
 				return
 			}
+			d.Close()
 		}
 		log.Printf("waiting for db... (attempt %d): %v", i, err)
 		time.Sleep(2 * time.Second)
