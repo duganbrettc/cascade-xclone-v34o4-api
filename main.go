@@ -581,6 +581,7 @@ func main() {
 
 	mux.HandleFunc("/healthz", func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "text/plain; charset=utf-8")
+		w.WriteHeader(http.StatusOK)
 		w.Write([]byte("ok"))
 	})
 
@@ -597,12 +598,17 @@ func main() {
 	mux.HandleFunc("/api/users/", withDB(handleUserByUsername))
 	mux.HandleFunc("/api/users", withDB(handleListUsers))
 
+	srv := &http.Server{
+		Handler:           mux,
+		ReadHeaderTimeout: 10 * time.Second,
+	}
+
 	ln, err := net.Listen("tcp", ":"+port)
 	if err != nil {
 		log.Fatalf("failed to bind :%s: %v", port, err)
 	}
-	log.Printf("listening on :%s", port)
-	if err := http.Serve(ln, mux); err != nil {
+	log.Printf("xclone-api listening on :%s", port)
+	if err := srv.Serve(ln); err != nil && err != http.ErrServerClosed {
 		log.Fatal(err)
 	}
 }
