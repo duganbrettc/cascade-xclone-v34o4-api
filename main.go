@@ -7,6 +7,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"log"
+	"net"
 	"net/http"
 	"os"
 	"strings"
@@ -563,6 +564,15 @@ func main() {
 
 	mux := http.NewServeMux()
 
+	mux.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
+		if r.URL.Path != "/" {
+			http.NotFound(w, r)
+			return
+		}
+		w.Header().Set("Content-Type", "text/plain; charset=utf-8")
+		w.Write([]byte("ok"))
+	})
+
 	mux.HandleFunc("/healthz", func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "text/plain; charset=utf-8")
 		w.Write([]byte("ok"))
@@ -581,8 +591,12 @@ func main() {
 	mux.HandleFunc("/api/users/", withDB(handleUserByUsername))
 	mux.HandleFunc("/api/users", withDB(handleListUsers))
 
+	ln, err := net.Listen("tcp", ":"+port)
+	if err != nil {
+		log.Fatalf("failed to bind :%s: %v", port, err)
+	}
 	log.Printf("listening on :%s", port)
-	if err := http.ListenAndServe(":"+port, mux); err != nil {
+	if err := http.Serve(ln, mux); err != nil {
 		log.Fatal(err)
 	}
 }
