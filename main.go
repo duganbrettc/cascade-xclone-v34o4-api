@@ -538,18 +538,19 @@ func withDB(h http.HandlerFunc) http.HandlerFunc {
 }
 
 func connectDB(dbURL string) {
-	var err error
+	d, err := sql.Open("postgres", dbURL)
+	if err != nil {
+		log.Printf("db open error (will retry): %v", err)
+	} else {
+		db = d
+	}
 	for i := 1; ; i++ {
-		var d *sql.DB
-		d, err = sql.Open("postgres", dbURL)
-		if err == nil {
-			if err = d.Ping(); err == nil {
-				db = d
+		if db != nil {
+			if err = db.Ping(); err == nil {
 				log.Println("connected to db")
 				close(dbReady)
 				return
 			}
-			d.Close()
 		}
 		log.Printf("waiting for db... (attempt %d): %v", i, err)
 		time.Sleep(2 * time.Second)
