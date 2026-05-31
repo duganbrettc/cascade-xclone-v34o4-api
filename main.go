@@ -491,7 +491,7 @@ func handleTimeline(w http.ResponseWriter, r *http.Request) {
 		SELECT p.id, p.user_id, p.body, p.created_at, u.username
 		FROM posts p
 		JOIN users u ON p.user_id = u.id
-		WHERE p.user_id IN (SELECT followee_id FROM follows WHERE follower_id = $1)
+		WHERE p.user_id = $1 OR p.user_id IN (SELECT followee_id FROM follows WHERE follower_id = $1)
 		ORDER BY p.created_at DESC
 		LIMIT 50
 	`, userID)
